@@ -1,0 +1,155 @@
+html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor controlado por Voz</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background-color: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #pizarra {
+            width: 80vw;
+            height: 70vh;
+            background-color: #1e1e1e;
+            border: 2px solid #333;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        /* Este es tu mouse virtual */
+        #cursor-virtual {
+            width: 20px;
+            height: 20px;
+            background-color: #00ff88;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 15px #00ff88;
+            transition: all 0.2s ease;
+            transform: translate(-50%, -50%); /* Centra el círculo */
+        }
+        .controles {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background-color: #00ff88;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #00cc6e;
+        }
+        #status {
+            margin-top: 10px;
+            color: #aaa;
+        }
+        #comando-detectado {
+            color: #00ff88;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controles">
+        <h1>Mueve el Cursor con tu Voz</h1>
+        <p>Di: <b>"arriba"</b>, <b>"abajo"</b>, <b>"izquierda"</b> o <b>"derecha"</b></p>
+        <button id="btn-iniciar">Iniciar Micrófono</button>
+        <div id="status">Estado: <span id="estado-texto">Apagado</span></div>
+        <div id="status">Último comando: <span id="comando-detectado">Ninguno</span></div>
+    </div>
+
+    <!-- Área donde se moverá el mouse -->
+    <div id="pizarra">
+        <div id="cursor-virtual"></div>
+    </div>
+
+    <script>
+        const btnIniciar = document.getElementById('btn-iniciar');
+        const estadoTexto = document.getElementById('estado-texto');
+        const comandoDetectado = document.getElementById('comando-detectado');
+        const cursor = document.getElementById('cursor-virtual');
+        const pizarra = document.getElementById('pizarra');
+
+        // Posición inicial del cursor (al centro de la pizarra)
+        let posX = pizarra.clientWidth / 2;
+        let posY = pizarra.clientHeight / 2;
+        
+        // Cuántos píxeles se mueve en cada paso
+        const PASO = 60; 
+
+        // Aplicar posición inicial
+        actualizarPosicion();
+
+        function actualizarPosicion() {
+            cursor.style.left = posX + 'px';
+            cursor.style.top = posY + 'px';
+        }
+
+        // Configuración de Reconocimiento de Voz
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            alert("Tu navegador no soporta el reconocimiento de voz. Usa Google Chrome.");
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES'; // Idioma Español
+            recognition.continuous = true; // No se detiene al dejar de hablar
+            recognition.interimResults = false; // Solo resultados finales
+
+            btnIniciar.addEventListener('click', () => {
+                recognition.start();
+                estadoTexto.textContent = "Escuchando...";
+                estadoTexto.style.color = "#00ff88";
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+                comandoDetectado.textContent = transcript;
+
+                const anchoMaximo = pizarra.clientWidth;
+                const altoMaximo = pizarra.clientHeight;
+
+                // Lógica de movimiento
+                if (transcript.includes('arriba')) {
+                    posY = Math.max(0, posY - PASO);
+                } else if (transcript.includes('abajo')) {
+                    posY = Math.min(altoMaximo, posY + PASO);
+                } else if (transcript.includes('izquierda')) {
+                    posX = Math.max(0, posX - PASO);
+                } else if (transcript.includes('derecha')) {
+                    posX = Math.min(anchoMaximo, posX + PASO);
+                }
+
+                actualizarPosicion();
+            };
+
+            recognition.onend = () => {
+                // Se reinicia automáticamente si se apaga
+                recognition.start();
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Error de reconocimiento: ", event.error);
+            };
+        }
+    </script>
+</body>
+</html>
+
